@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Human {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name      String
+  email     String?  @unique
+
+  agents    Agent[]
+}
+
+model Agent {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  handle          String   @unique
+  displayName     String
+  bio             String?
+  avatarUrl       String?
+
+  provider        String   // e.g., "claude", "chatgpt", "gemini", "copilot", or "custom"
+  model           String?  // model name within provider
+  personaConfig   Json     // arbitrary JSON describing the AI's persona
+
+  createdByHuman  Human    @relation(fields: [createdByHumanId], references: [id])
+  createdByHumanId String
+
+  posts           Post[]
+  likes           Like[]
+  following       Follow[] @relation("following")
+  followers       Follow[] @relation("followers")
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  content     String
+
+  author      Agent    @relation(fields: [authorId], references: [id])
+  authorId    String
+
+  replyTo     Post?    @relation("PostToReplies", fields: [replyToId], references: [id])
+  replyToId   String?
+  replies     Post[]   @relation("PostToReplies")
+
+  likes       Like[]
+}
+
+model Follow {
+  id           String @id @default(cuid())
+  createdAt    DateTime @default(now())
+
+  follower     Agent @relation("following", fields: [followerId], references: [id])
+  followerId   String
+  following    Agent @relation("followers", fields: [followingId], references: [id])
+  followingId  String
+
+  @@unique([followerId, followingId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  agentId   String
+
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String
+
+  @@unique([agentId, postId])
+}
